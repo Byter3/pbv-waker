@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+</head>
+
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <a class="navbar-brand" href="/">WakeOnLan</a>
+        <div class="ml-auto">
+            <a href="/" class="btn btn-secondary btn-sm">Back to Home</a>
+            <a href="/logout" class="btn btn-danger btn-sm">Logout</a>
+        </div>
+    </nav>
+
+    <div class="container">
+        <h1>Admin Dashboard</h1>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+        {% for category, message in messages %}
+        <div class="alert alert-{{ category }}" role="alert">
+            {{ message }}
+        </div>
+        {% endfor %}
+        {% endif %}
+        {% endwith %}
+
+        <hr>
+
+        <h3>User Management
+            <form action="{{ url_for('sync_users') }}" method="post" style="display:inline; float:right;">
+                <button type="submit" class="btn btn-info btn-sm">Sync Users from AD</button>
+            </form>
+        </h3>
+        <table class="table table-bordered">
+            <thead>
+                <tr>
+                    <th>Username</th>
+                    <th>Email</th>
+                    <th>Is Admin</th>
+                    <th>Assigned Workstations</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for username, user_data in users.items() %}
+                <tr>
+                    <td>{{ username }}</td>
+                    <td>{{ user_data.email }}</td>
+                    <td>
+                        <form action="{{ url_for('toggle_admin') }}" method="post">
+                            <input type="hidden" name="username" value="{{ username }}">
+                            <div class="custom-control custom-checkbox centered-checkbox">
+                                <input type="checkbox" class="custom-control-input" id="adminCheck{{ loop.index }}"
+                                    onchange="this.form.submit()" {% if user_data.is_admin %}checked{% endif %}>
+                                <label class="custom-control-label" for="adminCheck{{ loop.index }}"></label>
+                            </div>
+                        </form>
+                    </td>
+                    <td>
+                        <ul>
+                            {% for mac in user_data.assigned_macs %}
+                            {% for ws in workstations %}
+                            {% if ws.mac == mac %}
+                            <li>{{ ws.name }} ({{ mac }})</li>
+                            {% endif %}
+                            {% endfor %}
+                            {% endfor %}
+                        </ul>
+                    </td>
+                    <td>
+                        <button type="button" class="btn btn-primary btn-sm" data-toggle="modal"
+                            data-target="#assignModal{{ loop.index }}">
+                            Assign Workstations
+                        </button>
+
+                        <!-- Assign Modal -->
+                        <div class="modal fade" id="assignModal{{ loop.index }}" tabindex="-1" role="dialog">
+                            <div class="modal-dialog" role="document">
+                                <div class="modal-content">
+                                    <form action="{{ url_for('assign_workstations') }}" method="post">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Assign Workstations for {{ username }}</h5>
+                                            <button type="button" class="close" data-dismiss="modal">
+                                                <span>&times;</span>
+                                            </button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <input type="hidden" name="username" value="{{ username }}">
+                                            <div class="form-group">
+                                                <label>Select Workstations:</label>
+                                                <div
+                                                    style="max-height: 200px; overflow-y: auto; border: 1px solid #ced4da; padding: 10px;">
+                                                    {% for ws in workstations %}
+                                                    <div class="form-check">
+                                                        <input class="form-check-input" type="checkbox"
+                                                            name="assigned_macs" value="{{ ws.mac }}"
+                                                            id="ws{{ loop.index }}_{{ username }}" {% if ws.mac in
+                                                            user_data.assigned_macs %}checked{% endif %}>
+                                                        <label class="form-check-label"
+                                                            for="ws{{ loop.index }}_{{ username }}">
+                                                            {{ ws.name }} ({{ ws.ip }})
+                                                        </label>
+                                                    </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary"
+                                                data-dismiss="modal">Close</button>
+                                            <button type="submit" class="btn btn-primary">Save Changes</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+
+        <hr>
+
+        <div class="row">
+            <div class="col-md-5">
+                <h3>Add Workstation</h3>
+                <form action="/add" method="post">
+                    <div class="form-group">
+                        <label for="name">Name:</label>
+                        <input type="text" id="name" name="name" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="ip">IP Address:</label>
+                        <input type="text" id="ip" name="ip" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="mac">MAC Address:</label>
+                        <input type="text" id="mac" name="mac" class="form-control" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Workstation</button>
+                </form>
+            </div>
+            <div class="col-md-7">
+                <h3>Workstations List</h3>
+                <table class="table table-sm table-striped">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>IP</th>
+                            <th>MAC</th>
+                            <th>Action</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ws in workstations %}
+                        <tr>
+                            <td>{{ ws.name }}</td>
+                            <td>{{ ws.ip }}</td>
+                            <td>{{ ws.mac }}</td>
+                            <td>
+                                <button type="button" class="btn btn-danger btn-sm"
+                                    onclick="confirmDelete('{{ ws.mac }}', '{{ ws.name }}')">
+                                    Delete
+                                </button>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Confirmation Modal -->
+    <div class="modal fade" id="deleteConfirmModal" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Confirm Deletion</h5>
+                    <button type="button" class="close" data-dismiss="modal">
+                        <span>&times;</span>
+                    </button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete workstation <strong id="deleteWsName"></strong>?</p>
+                </div>
+                <div class="modal-footer">
+                    <form action="/delete" method="post">
+                        <input type="hidden" name="mac" id="deleteWsMac">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-danger">Delete</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+    <script>
+        function confirmDelete(mac, name) {
+            document.getElementById('deleteWsMac').value = mac;
+            document.getElementById('deleteWsName').innerText = name;
+            $('#deleteConfirmModal').modal('show');
+        }
+    </script>
+</body>
+
+</html>

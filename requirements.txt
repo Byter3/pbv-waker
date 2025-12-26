@@ -1,3 +1,5 @@
 Flask==2.1.2
 Werkzeug==2.0.3
 wakeonlan
+flask-login
+ldap3
