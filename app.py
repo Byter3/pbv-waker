@@ -1,4 +1,4 @@
-from flask import Flask, render_template, redirect, url_for, request, flash, jsonify
+from flask import Flask, render_template, redirect, url_for, request, flash, jsonify, Response
 import os
 import json
 import datetime
@@ -263,6 +263,18 @@ def register_workstation():
         
     save_json('workstations.json', workstations)
     return jsonify({'status': 'success', 'message': 'Workstation registered'}), 200
+
+@app.route('/rdp/<ip>')
+@login_required
+def rdp_download(ip):
+    # RDP file content
+    rdp_content = f"full address:s:{ip}\nprompt for credentials:i:1"
+    
+    return Response(
+        rdp_content,
+        mimetype="application/x-rdp",
+        headers={"Content-disposition": f"attachment; filename={ip}.rdp"}
+    )
 
 if __name__ == '__main__':
     app.run(debug=True,host='0.0.0.0',port=5000)

@@ -30,6 +30,8 @@
                     <th>Name</th>
                     <th>IP Address</th>
                     <th>MAC Address</th>
+                    <th>Last User</th>
+                    <th>Last Seen</th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -39,9 +41,12 @@
                     <td>{{ workstation.name }}</td>
                     <td>{{ workstation.ip }}</td>
                     <td>{{ workstation.mac }}</td>
+                    <td>{{ workstation.last_user }}</td>
+                    <td>{{ workstation.last_seen | time_ago }}</td>
                     <td>
                         <a href="{{ url_for('wake', ip=workstation.ip, mac=workstation.mac) }}"
                             class="btn btn-primary">Wake</a>
+                        <a href="{{ url_for('rdp_download', ip=workstation.ip) }}" class="btn btn-info ml-1">RDP</a>
                     </td>
                 </tr>
                 {% endfor %}
