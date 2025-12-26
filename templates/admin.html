@@ -155,6 +155,8 @@
                             <th>Name</th>
                             <th>IP</th>
                             <th>MAC</th>
+                            <th>Last User</th>
+                            <th>Last Seen</th>
                             <th>Action</th>
                         </tr>
                     </thead>
@@ -164,6 +166,8 @@
                             <td>{{ ws.name }}</td>
                             <td>{{ ws.ip }}</td>
                             <td>{{ ws.mac }}</td>
+                            <td>{{ ws.last_user }}</td>
+                            <td>{{ ws.last_seen | time_ago }}</td>
                             <td>
                                 <button type="button" class="btn btn-danger btn-sm"
                                     onclick="confirmDelete('{{ ws.mac }}', '{{ ws.name }}')">

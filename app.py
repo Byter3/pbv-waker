@@ -1,12 +1,40 @@
-from flask import Flask, render_template, redirect, url_for, request, flash
+from flask import Flask, render_template, redirect, url_for, request, flash, jsonify
 import os
 import json
+import datetime
 from wakeonlan import send_magic_packet
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from ad_integration import authenticate_user, sync_users_from_ad
 
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
+
+def time_ago(timestamp_str):
+    if not timestamp_str:
+        return ""
+    try:
+        past_time = datetime.datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+        now = datetime.datetime.now()
+        diff = now - past_time
+        minutes = int(diff.total_seconds() / 60)
+        
+        if minutes < 1:
+            return "Just now"
+        elif minutes == 1:
+            return "1 min ago"
+        elif minutes < 60:
+            return f"{minutes} mins ago"
+        else:
+            hours = minutes // 60
+            if hours < 24:
+                return f"{hours} hours ago"
+            else:
+                days = hours // 24
+                return f"{days} days ago"
+    except Exception:
+        return timestamp_str
+
+app.jinja_env.filters['time_ago'] = time_ago
 
 login_manager = LoginManager()
 login_manager.init_app(app)
@@ -198,6 +226,43 @@ def sync_users():
     save_users(current_users)
     flash('Users synced from Active Directory.', 'success')
     return redirect(url_for('admin'))
+
+@app.route('/api/register', methods=['POST'])
+def register_workstation():
+    data = request.get_json()
+    if not data:
+        return jsonify({'error': 'Invalid JSON'}), 400
+    
+    mac = data.get('mac')
+    ip = data.get('ip')
+    name = data.get('name')
+    user = data.get('user', '')
+    last_seen = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    
+    if not mac or not ip or not name:
+        return jsonify({'error': 'Missing required fields'}), 400
+        
+    workstations = load_json('workstations.json')
+    
+    # Check if workstation exists
+    existing = next((item for item in workstations if item['mac'] == mac), None)
+    
+    if existing:
+        existing['ip'] = ip
+        existing['name'] = name
+        existing['last_user'] = user
+        existing['last_seen'] = last_seen
+    else:
+        workstations.append({
+            'mac': mac,
+            'ip': ip,
+            'name': name,
+            'last_user': user,
+            'last_seen': last_seen
+        })
+        
+    save_json('workstations.json', workstations)
+    return jsonify({'status': 'success', 'message': 'Workstation registered'}), 200
 
 if __name__ == '__main__':
     app.run(debug=True,host='0.0.0.0',port=5000)
