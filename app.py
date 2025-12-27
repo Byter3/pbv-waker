@@ -2,6 +2,9 @@ from flask import Flask, render_template, redirect, url_for, request, flash, jso
 import os
 import json
 import datetime
+import threading
+import time
+import requests
 from wakeonlan import send_magic_packet
 from flask_login import LoginManager, UserMixin, login_user, login_required, logout_user, current_user
 from ad_integration import authenticate_user, sync_users_from_ad
@@ -54,10 +57,21 @@ def load_user(username):
         return User(username, users[username])
     return None
 
-def load_json(file_path):
+def load_json(file_path, default=None):
     if os.path.exists(file_path):
-        with open(file_path, 'r') as file:
-            return json.load(file)
+        try:
+            with open(file_path, 'r', encoding='utf-8') as file:
+                return json.load(file)
+        except json.JSONDecodeError as e:
+            print(f"DTO: Error decoding {file_path}: {e}")
+            if default is not None:
+                return default
+            return [] if 'workstations' in file_path else {}
+    if default is not None:
+        return default
+    return [] if 'workstations' in file_path else {}
+    if default is not None:
+        return default
     return [] if 'workstations' in file_path else {}
 
 def save_json(file_path, data):
@@ -275,6 +289,80 @@ def rdp_download(ip):
         mimetype="application/x-rdp",
         headers={"Content-disposition": f"attachment; filename={ip}.rdp"}
     )
+
+def reset_plug_thread(plug_id, ha_url, ha_token):
+    headers = {
+        "Authorization": f"Bearer {ha_token}",
+        "Content-Type": "application/json",
+    }
+    
+    # Turn OFF
+    try:
+        print(f"DTO: Turning OFF plug {plug_id} via {ha_url}...")
+        resp = requests.post(f"{ha_url}/api/services/switch/turn_off", headers=headers, json={"entity_id": plug_id})
+        print(f"DTO: HA Response ({resp.status_code}): {resp.text}")
+    except Exception as e:
+        print(f"Error turning off plug {plug_id}: {e}")
+        return
+
+    # Wait 15 seconds
+    time.sleep(15)
+
+    # Turn ON
+    try:
+        print(f"DTO: Turning ON plug {plug_id}...")
+        resp = requests.post(f"{ha_url}/api/services/switch/turn_on", headers=headers, json={"entity_id": plug_id})
+        print(f"DTO: HA Response ({resp.status_code}): {resp.text}")
+    except Exception as e:
+        print(f"Error turning on plug {plug_id}: {e}")
+
+@app.route('/hard_reset/<mac>', methods=['POST'])
+@login_required
+def hard_reset(mac):
+    try:
+        # Load configs
+        plugs = load_json('plugs.json', {})
+        ha_config = load_json('ha_config.json', {})
+        workstations = load_json('workstations.json')
+        
+        # Find workstation by MAC to get Hostname
+        target_ws = next((ws for ws in workstations if ws['mac'] == mac), None)
+        
+        if not target_ws:
+            return jsonify({'status': 'error', 'message': 'Workstation not found'}), 404
+            
+        ws_name = target_ws.get('name')
+        if not ws_name:
+             return jsonify({'status': 'error', 'message': 'Workstation has no name'}), 400
+
+        # Lookup plug by Hostname
+        plug_id = plugs.get(ws_name)
+        if not plug_id:
+            # Auto-generate based on convention: PBV-LEVI -> switch.pbv_levi_switch_0
+            sanitized_name = ws_name.lower().replace('-', '_')
+            plug_id = f"switch.{sanitized_name}_switch_0"
+            print(f"DTO: Auto-generated plug ID for {ws_name}: {plug_id}")
+        
+        # SAFETY GUARD: Prevent resetting the host machine
+        if ws_name == "PBV-Mufasa":
+            print("SAFETY BLOCK: Attempted to reset PBV-Mufasa. Aborting.")
+            return jsonify({'status': 'error', 'message': 'Safety Lock: Cannot reset Host Machine (PBV-Mufasa)'}), 403
+        
+        ha_url = ha_config.get('url')
+        ha_token = ha_config.get('token')
+        
+        if not ha_url or not ha_token:
+            print("Warning: HA Config using defaults or missing.")
+
+        # Start background thread
+        thread = threading.Thread(target=reset_plug_thread, args=(plug_id, ha_url, ha_token))
+        thread.start()
+        
+        return jsonify({'status': 'success', 'message': f'Hard reset initiated for {ws_name}'}), 200
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        return jsonify({'status': 'error', 'message': str(e)}), 500
 
 if __name__ == '__main__':
     app.run(debug=True,host='0.0.0.0',port=5000)

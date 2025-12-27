@@ -4,6 +4,8 @@ workstations.txt
 workstations.json
 users.json
 ad_config.json
+ha_config.json
+plugs.json
 .vscode/
 .idea/
 venv/
