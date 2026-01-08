@@ -32,12 +32,12 @@
         <table class="table table-striped">
             <thead>
                 <tr>
-                    <th>Status</th>
-                    <th>Name</th>
-                    <th>IP Address</th>
-                    <th>MAC Address</th>
-                    <th>Last User</th>
-                    <th>Last Seen</th>
+                    <th class="sortable" data-sort="status">Status <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="name">Name <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="ip">IP Address <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="mac">MAC Address <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="user">Last User <span class="sort-icon"></span></th>
+                    <th class="sortable" data-sort="seen">Last Seen <span class="sort-icon"></span></th>
                     <th>Action</th>
                 </tr>
             </thead>
@@ -65,7 +65,23 @@
                         </small>
                         {% endif %}
                     </td>
-                    <td>{{ workstation.last_seen | time_ago }}</td>
+                    <td data-value="{{ workstation.last_seen or '' }}" class="last-seen-cell">
+                        {% set last_seen_str = workstation.last_seen %}
+                        {% if last_seen_str %}
+                        {% set mins_ago = ((now - last_seen_str | parse_datetime).total_seconds() / 60) | int if
+                        last_seen_str else 999 %}
+                        {% if mins_ago > 6 %}
+                        <span class="stale-warning">
+                            <span class="warning-icon">⚠</span>
+                            {{ last_seen_str | time_ago }}
+                        </span>
+                        {% else %}
+                        <span class="recent-checkin">{{ last_seen_str | time_ago }}</span>
+                        {% endif %}
+                        {% else %}
+                        <span class="text-muted">Never</span>
+                        {% endif %}
+                    </td>
                     <td>
                         <a href="{{ url_for('wake', ip=workstation.ip, mac=workstation.mac) }}"
                             class="btn btn-primary">Wake</a>
@@ -210,6 +226,95 @@
             currentMac = null;
             currentBtn = null;
         }
+
+        // Table sorting functionality
+        let currentSort = { column: null, ascending: true };
+
+        function sortTable(column) {
+            const table = document.querySelector('.table');
+            const tbody = table.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const headers = table.querySelectorAll('th.sortable');
+
+            // Column index mapping
+            const columnIndex = {
+                'status': 0,
+                'name': 1,
+                'ip': 2,
+                'mac': 3,
+                'user': 4,
+                'seen': 5
+            };
+
+            const colIdx = columnIndex[column];
+
+            // Toggle direction if same column clicked
+            if (currentSort.column === column) {
+                currentSort.ascending = !currentSort.ascending;
+            } else {
+                currentSort.column = column;
+                currentSort.ascending = true;
+            }
+
+            // Update sort icons
+            headers.forEach(th => {
+                const icon = th.querySelector('.sort-icon');
+                icon.textContent = '';
+                th.classList.remove('sort-asc', 'sort-desc');
+            });
+
+            const activeHeader = table.querySelector(`th[data-sort="${column}"]`);
+            const activeIcon = activeHeader.querySelector('.sort-icon');
+            activeIcon.textContent = currentSort.ascending ? ' ▲' : ' ▼';
+            activeHeader.classList.add(currentSort.ascending ? 'sort-asc' : 'sort-desc');
+
+            // Sort rows
+            rows.sort((a, b) => {
+                let aVal, bVal;
+
+                if (column === 'status') {
+                    // Sort by power status: running > idle/off > not-found > loading
+                    const getStatusPriority = (row) => {
+                        const indicator = row.querySelector('.power-indicator');
+                        if (indicator.classList.contains('running')) return 1;
+                        if (indicator.classList.contains('off')) return 2;
+                        if (indicator.classList.contains('not-found')) return 3;
+                        return 4; // loading/unknown
+                    };
+                    aVal = getStatusPriority(a);
+                    bVal = getStatusPriority(b);
+                } else if (column === 'seen') {
+                    // Sort by actual timestamp stored in data-value
+                    aVal = a.cells[colIdx].getAttribute('data-value') || '';
+                    bVal = b.cells[colIdx].getAttribute('data-value') || '';
+                } else if (column === 'ip') {
+                    // Sort IP addresses numerically
+                    const ipToNum = (ip) => {
+                        const parts = ip.split('.');
+                        return parts.reduce((acc, part, i) => acc + parseInt(part) * Math.pow(256, 3 - i), 0);
+                    };
+                    aVal = ipToNum(a.cells[colIdx].textContent.trim());
+                    bVal = ipToNum(b.cells[colIdx].textContent.trim());
+                } else {
+                    aVal = a.cells[colIdx].textContent.trim().toLowerCase();
+                    bVal = b.cells[colIdx].textContent.trim().toLowerCase();
+                }
+
+                if (aVal < bVal) return currentSort.ascending ? -1 : 1;
+                if (aVal > bVal) return currentSort.ascending ? 1 : -1;
+                return 0;
+            });
+
+            // Re-append rows in sorted order
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        // Add click handlers to sortable headers
+        document.addEventListener('DOMContentLoaded', function () {
+            document.querySelectorAll('th.sortable').forEach(th => {
+                th.addEventListener('click', () => sortTable(th.dataset.sort));
+            });
+        });
 
         // Load power status for all workstations
         function loadPowerStatuses() {

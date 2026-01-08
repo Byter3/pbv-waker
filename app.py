@@ -39,6 +39,17 @@ def time_ago(timestamp_str):
 
 app.jinja_env.filters['time_ago'] = time_ago
 
+def parse_datetime(timestamp_str):
+    """Parse a datetime string into a datetime object."""
+    if not timestamp_str:
+        return datetime.datetime.min
+    try:
+        return datetime.datetime.strptime(timestamp_str, "%Y-%m-%d %H:%M:%S")
+    except Exception:
+        return datetime.datetime.min
+
+app.jinja_env.filters['parse_datetime'] = parse_datetime
+
 login_manager = LoginManager()
 login_manager.init_app(app)
 login_manager.login_view = 'login'
@@ -132,7 +143,7 @@ def home():
     all_workstations = read_workstations()
     # User requested that even admins should only see assigned computers on the home page
     workstations = [ws for ws in all_workstations if ws['mac'] in current_user.assigned_macs]
-    return render_template('index.html', workstations=workstations, user=current_user)
+    return render_template('index.html', workstations=workstations, user=current_user, now=datetime.datetime.now())
 
 @app.route('/wake/<ip>/<mac>')
 def wake(ip, mac):

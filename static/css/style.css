@@ -178,6 +178,42 @@ body {
     letter-spacing: 1px;
 }
 
+/* Sortable columns */
+th.sortable {
+    cursor: pointer;
+    user-select: none;
+    transition: background 0.2s ease;
+}
+
+th.sortable:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+th.sortable .sort-icon {
+    font-size: 0.7rem;
+    opacity: 0.8;
+}
+
+th.sortable.sort-asc,
+th.sortable.sort-desc {
+    background: rgba(0, 123, 255, 0.2);
+}
+
+/* Last Seen Status */
+.stale-warning {
+    color: #ff6b7a;
+    font-weight: 500;
+}
+
+.stale-warning .warning-icon {
+    margin-right: 4px;
+    font-size: 0.9rem;
+}
+
+.recent-checkin {
+    color: #7dff9c;
+}
+
 .table td,
 .table th {
     border-top: 1px solid rgba(255, 255, 255, 0.05);
