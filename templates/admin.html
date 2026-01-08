@@ -6,18 +6,23 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
 </head>
 
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-        <a class="navbar-brand" href="/">WakeOnLan</a>
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <a class="navbar-brand" href="/">
+            <img src="{{ url_for('static', filename='img/postbox_logo.png') }}" alt="Logo" style="height: 40px;"
+                class="d-inline-block align-top mr-2">
+            WakeOnLan
+        </a>
         <div class="ml-auto">
             <a href="/" class="btn btn-secondary btn-sm">Back to Home</a>
             <a href="/logout" class="btn btn-danger btn-sm">Logout</a>
         </div>
     </nav>
 
-    <div class="container">
+    <div class="container-fluid glass-panel p-4 mt-4" style="max-width: 95%;">
         <h1>Admin Dashboard</h1>
 
         {% with messages = get_flashed_messages(with_categories=true) %}
@@ -30,7 +35,7 @@
         {% endif %}
         {% endwith %}
 
-        <hr>
+        <hr style="border-color: rgba(255,255,255,0.1);">
 
         <h3>User Management
             <form action="{{ url_for('sync_users') }}" method="post" style="display:inline; float:right;">
@@ -78,55 +83,13 @@
                             data-target="#assignModal{{ loop.index }}">
                             Assign Workstations
                         </button>
-
-                        <!-- Assign Modal -->
-                        <div class="modal fade" id="assignModal{{ loop.index }}" tabindex="-1" role="dialog">
-                            <div class="modal-dialog" role="document">
-                                <div class="modal-content">
-                                    <form action="{{ url_for('assign_workstations') }}" method="post">
-                                        <div class="modal-header">
-                                            <h5 class="modal-title">Assign Workstations for {{ username }}</h5>
-                                            <button type="button" class="close" data-dismiss="modal">
-                                                <span>&times;</span>
-                                            </button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <input type="hidden" name="username" value="{{ username }}">
-                                            <div class="form-group">
-                                                <label>Select Workstations:</label>
-                                                <div
-                                                    style="max-height: 200px; overflow-y: auto; border: 1px solid #ced4da; padding: 10px;">
-                                                    {% for ws in workstations %}
-                                                    <div class="form-check">
-                                                        <input class="form-check-input" type="checkbox"
-                                                            name="assigned_macs" value="{{ ws.mac }}"
-                                                            id="ws{{ loop.index }}_{{ username }}" {% if ws.mac in
-                                                            user_data.assigned_macs %}checked{% endif %}>
-                                                        <label class="form-check-label"
-                                                            for="ws{{ loop.index }}_{{ username }}">
-                                                            {{ ws.name }} ({{ ws.ip }})
-                                                        </label>
-                                                    </div>
-                                                    {% endfor %}
-                                                </div>
-                                            </div>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary"
-                                                data-dismiss="modal">Close</button>
-                                            <button type="submit" class="btn btn-primary">Save Changes</button>
-                                        </div>
-                                    </form>
-                                </div>
-                            </div>
-                        </div>
                     </td>
                 </tr>
                 {% endfor %}
             </tbody>
         </table>
 
-        <hr>
+        <hr style="border-color: rgba(255,255,255,0.1);">
 
         <div class="row">
             <div class="col-md-5">
@@ -205,6 +168,47 @@
             </div>
         </div>
     </div>
+
+    <!-- Assign Modals (Moved outside table/glass-panel to fix z-index) -->
+    {% for username, user_data in users.items() %}
+    <div class="modal fade" id="assignModal{{ loop.index }}" tabindex="-1" role="dialog">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <form action="{{ url_for('assign_workstations') }}" method="post">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Assign Workstations for {{ username }}</h5>
+                        <button type="button" class="close" data-dismiss="modal">
+                            <span>&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body">
+                        <input type="hidden" name="username" value="{{ username }}">
+                        <div class="form-group">
+                            <label>Select Workstations:</label>
+                            <div
+                                style="max-height: 200px; overflow-y: auto; border: 1px solid rgba(255,255,255,0.2); padding: 10px;">
+                                {% for ws in workstations %}
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" name="assigned_macs"
+                                        value="{{ ws.mac }}" id="ws{{ loop.index }}_{{ username }}" {% if ws.mac in
+                                        user_data.assigned_macs %}checked{% endif %}>
+                                    <label class="form-check-label" for="ws{{ loop.index }}_{{ username }}">
+                                        {{ ws.name }} ({{ ws.ip }})
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+                        <button type="submit" class="btn btn-primary">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
 
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>

@@ -9,3 +9,15 @@ plugs.json
 .vscode/
 .idea/
 venv/
+.venv/
+
+# Build artifacts
+build/
+dist/
+*.spec
+
+# Local Assets
+res/Postbox_ident.jpg
+static/img/Postbox_ident.jpg
+static/img/postbox_logo.png
+*.png

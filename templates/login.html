@@ -1,42 +1,75 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Login</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
 </head>
-<body>
-    <div class="container mt-5">
-        <div class="row justify-content-center">
-            <div class="col-md-6">
-                <div class="card">
-                    <div class="card-header">Login</div>
-                    <div class="card-body">
-                        {% with messages = get_flashed_messages(with_categories=true) %}
-                            {% if messages %}
-                                {% for category, message in messages %}
-                                    <div class="alert alert-{{ category }}" role="alert">
-                                        {{ message }}
-                                    </div>
-                                {% endfor %}
-                            {% endif %}
-                        {% endwith %}
-                        <form method="post">
-                            <div class="form-group">
-                                <label for="username">Username</label>
-                                <input type="text" class="form-control" id="username" name="username" required>
-                            </div>
-                            <div class="form-group">
-                                <label for="password">Password</label>
-                                <input type="password" class="form-control" id="password" name="password" required>
-                            </div>
-                            <button type="submit" class="btn btn-primary">Login</button>
-                        </form>
-                    </div>
+
+<body class="login-page">
+    <div class="container d-flex flex-column align-items-center justify-content-center" style="min-height: 100vh;">
+        <h1 class="welcome-text">Welcome at PBV Wake On Lan</h1>
+
+        <!-- Login Card -->
+        <div class="glass-panel login-card mb-4">
+            <div class="card-header">
+                <div class="service-btn header-pill">
+                    <img src="{{ url_for('static', filename='img/pbv_transparent.png') }}" class="service-logo"
+                        alt="PBV">
+                    <div class="separator-line"></div>
+                    <span class="header-login-text">LOGIN</span>
                 </div>
+            </div>
+            <div class="card-body">
+                {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                {% for category, message in messages %}
+                <div class="alert alert-{{ category }}" role="alert">
+                    {{ message }}
+                </div>
+                {% endfor %}
+                {% endif %}
+                {% endwith %}
+                <form method="post">
+                    <div class="form-group">
+                        <label for="username">Username</label>
+                        <input type="text" class="form-control" id="username" name="username" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">Password</label>
+                        <input type="password" class="form-control" id="password" name="password" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block">Login</button>
+                </form>
+            </div>
+        </div>
+
+        <!-- External Services -->
+        <div class="glass-panel external-links-container">
+            <div class="external-title">Looking for something else?</div>
+
+            <div class="external-buttons-row">
+                <a href="https://postbox-visual.ftrackapp.com/" class="service-btn" target="_blank">
+                    <img src="{{ url_for('static', filename='img/pbv_transparent.png') }}" class="service-logo"
+                        alt="Postbox">
+                    <div class="separator-line"></div>
+                    <img src="{{ url_for('static', filename='img/ftrack_transparent.png') }}" class="service-logo"
+                        alt="Ftrack">
+                </a>
+
+                <a href="http://wiki.postboxvisual.com/" class="service-btn" target="_blank">
+                    <img src="{{ url_for('static', filename='img/pbv_transparent.png') }}" class="service-logo"
+                        alt="Postbox">
+                    <div class="separator-line"></div>
+                    <img src="{{ url_for('static', filename='img/wiki_transparent.png') }}" class="service-logo"
+                        alt="Wiki">
+                </a>
             </div>
         </div>
     </div>
 </body>
+
 </html>

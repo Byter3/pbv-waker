@@ -3,9 +3,21 @@ import socket
 import requests
 import time
 import getpass
+import ctypes
 
-SERVER_URL = "http://10.10.101.109:5000/api/register"
+SERVER_URL = "http://10.10.101.109:5001/api/register"
 TARGET_SUBNET_PREFIX = "10.10.101."
+
+class LASTINPUTINFO(ctypes.Structure):
+    _fields_ = [("cbSize", ctypes.c_uint),
+                ("dwTime", ctypes.c_ulong)]
+
+def get_idle_duration():
+    lastInputInfo = LASTINPUTINFO()
+    lastInputInfo.cbSize = ctypes.sizeof(LASTINPUTINFO)
+    ctypes.windll.user32.GetLastInputInfo(ctypes.byref(lastInputInfo))
+    millis = ctypes.windll.kernel32.GetTickCount()
+    return (millis - lastInputInfo.dwTime) / 1000.0
 
 def get_network_info():
     """
@@ -43,15 +55,17 @@ def register():
 
     name, ip, mac = info
     current_user = getpass.getuser()
+    idle_seconds = get_idle_duration()
     
     payload = {
         "name": name,
         "ip": ip,
         "mac": mac,
-        "user": current_user
+        "user": current_user,
+        "idle_seconds": idle_seconds
     }
     
-    print(f"Registering {name} ({ip}) - {mac} as user: {current_user}...")
+    print(f"Registering {name} ({ip}) - {mac} as user: {current_user} (Idle: {idle_seconds:.1f}s)...")
     
     try:
         response = requests.post(SERVER_URL, json=payload)

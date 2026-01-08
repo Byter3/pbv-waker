@@ -6,14 +6,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Workstation List</title>
     <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <link href="{{ url_for('static', filename='css/style.css') }}" rel="stylesheet">
     <script src="https://code.jquery.com/jquery-3.5.1.slim.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.5.4/dist/umd/popper.min.js"></script>
     <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
 </head>
 
 <body>
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-        <a class="navbar-brand" href="#">WakeOnLan</a>
+    <nav class="navbar navbar-expand-lg navbar-dark mb-4">
+        <a class="navbar-brand" href="#">
+            <img src="{{ url_for('static', filename='img/postbox_logo.png') }}" alt="Logo" style="height: 40px;"
+                class="d-inline-block align-top mr-2">
+            WakeOnLan
+        </a>
         <div class="ml-auto text-light">
             Welcome, {{ user.id }}
             {% if user.is_admin %}
@@ -22,11 +27,12 @@
             <a href="/logout" class="btn btn-danger btn-sm ml-2">Logout</a>
         </div>
     </nav>
-    <div class="container">
-        <h1 class="mb-4">Workstation List</h1>
+    <div class="container-fluid glass-panel p-4 mt-4" style="max-width: 95%;">
+        <h1 class="mb-4 text-center">Workstation List</h1>
         <table class="table table-striped">
             <thead>
                 <tr>
+                    <th>Status</th>
                     <th>Name</th>
                     <th>IP Address</th>
                     <th>MAC Address</th>
@@ -37,11 +43,28 @@
             </thead>
             <tbody>
                 {% for workstation in workstations %}
-                <tr>
+                <tr data-workstation-name="{{ workstation.name }}">
+                    <td class="power-status-cell">
+                        <span class="power-indicator loading" data-name="{{ workstation.name }}">
+                            <span class="status-dot"></span>
+                            <span class="status-text">Loading...</span>
+                        </span>
+                    </td>
                     <td>{{ workstation.name }}</td>
                     <td>{{ workstation.ip }}</td>
                     <td>{{ workstation.mac }}</td>
-                    <td>{{ workstation.last_user }}</td>
+                    <td>
+                        {{ workstation.last_user }}
+                        {% if workstation.last_user %}
+                        <small class="ml-1">
+                            {% if not workstation.idle_seconds or workstation.idle_seconds < 60 %} <span
+                                class="text-success font-weight-bold">(Active)</span>
+                                {% else %}
+                                <span class="text-warning">(Idle: {{ (workstation.idle_seconds / 60) | int }}m)</span>
+                                {% endif %}
+                        </small>
+                        {% endif %}
+                    </td>
                     <td>{{ workstation.last_seen | time_ago }}</td>
                     <td>
                         <a href="{{ url_for('wake', ip=workstation.ip, mac=workstation.mac) }}"
@@ -133,17 +156,25 @@
             btn.removeClass('btn-danger').addClass('btn-secondary');
 
             let timeLeft = 15;
+            const totalTime = 15;
+
+            // Initial State
             btn.text(`Resetting... ${timeLeft}s`);
+            btn.css('background', `linear-gradient(90deg, #dc3545 0%, #6c757d 0%)`);
 
             const timer = setInterval(function () {
                 timeLeft--;
+                const percent = ((totalTime - timeLeft) / totalTime) * 100;
+
                 if (timeLeft > 0) {
                     btn.text(`Resetting... ${timeLeft}s`);
+                    btn.css('background', `linear-gradient(90deg, #dc3545 ${percent}%, #6c757d ${percent}%)`);
                 } else {
                     clearInterval(timer);
                     btn.text(originalText);
                     btn.prop('disabled', false);
                     btn.removeClass('btn-secondary').addClass('btn-danger');
+                    btn.css('background', ''); // Reset background
                 }
             }, 1000);
 
@@ -163,6 +194,7 @@
                     btn.text(originalText);
                     btn.prop('disabled', false);
                     btn.removeClass('btn-secondary').addClass('btn-danger');
+                    btn.css('background', '');
                 }
             }).catch(err => {
                 console.error("Network error:", err);
@@ -171,6 +203,7 @@
                 btn.text(originalText);
                 btn.prop('disabled', false);
                 btn.removeClass('btn-secondary').addClass('btn-danger');
+                btn.css('background', '');
             });
 
             // Reset globals
@@ -178,7 +211,48 @@
             currentBtn = null;
         }
 
+        // Load power status for all workstations
+        function loadPowerStatuses() {
+            const indicators = document.querySelectorAll('.power-indicator');
+            indicators.forEach(indicator => {
+                const name = indicator.dataset.name;
+                fetch(`/api/power_status/${encodeURIComponent(name)}`)
+                    .then(response => response.json())
+                    .then(data => {
+                        indicator.classList.remove('loading');
+                        const dot = indicator.querySelector('.status-dot');
+                        const text = indicator.querySelector('.status-text');
+
+                        if (data.plug_not_found) {
+                            indicator.classList.add('not-found');
+                            indicator.classList.remove('running', 'off');
+                            text.textContent = 'Plug NA';
+                        } else if (data.is_running) {
+                            indicator.classList.add('running');
+                            indicator.classList.remove('off', 'not-found');
+                            text.textContent = `Running (${Math.round(data.power_watts)}W)`;
+                        } else {
+                            indicator.classList.add('off');
+                            indicator.classList.remove('running', 'not-found');
+                            text.textContent = data.power_watts > 0 ? `Idle (${Math.round(data.power_watts)}W)` : 'Off';
+                        }
+                    })
+                    .catch(err => {
+                        console.error(`Error loading power status for ${name}:`, err);
+                        indicator.classList.remove('loading');
+                        indicator.classList.add('unknown');
+                        indicator.querySelector('.status-text').textContent = 'Unknown';
+                    });
+            });
+        }
+
         $(document).ready(function () {
+            // Load power statuses on page load
+            loadPowerStatuses();
+
+            // Refresh power statuses every 30 seconds
+            setInterval(loadPowerStatuses, 30000);
+
             {% with messages = get_flashed_messages(with_categories = true) %}
             {% if messages %}
             $('#notificationModal').modal('show');

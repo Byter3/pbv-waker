@@ -251,6 +251,7 @@ def register_workstation():
     ip = data.get('ip')
     name = data.get('name')
     user = data.get('user', '')
+    idle_seconds = data.get('idle_seconds', 0)
     last_seen = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     if not mac or not ip or not name:
@@ -266,13 +267,15 @@ def register_workstation():
         existing['name'] = name
         existing['last_user'] = user
         existing['last_seen'] = last_seen
+        existing['idle_seconds'] = idle_seconds
     else:
         workstations.append({
             'mac': mac,
             'ip': ip,
             'name': name,
             'last_user': user,
-            'last_seen': last_seen
+            'last_seen': last_seen,
+            'idle_seconds': idle_seconds
         })
         
     save_json('workstations.json', workstations)
@@ -364,5 +367,57 @@ def hard_reset(mac):
         traceback.print_exc()
         return jsonify({'status': 'error', 'message': str(e)}), 500
 
+@app.route('/api/power_status/<name>')
+@login_required
+def get_power_status(name):
+    """Get power consumption status for a workstation's smart plug."""
+    try:
+        ha_config = load_json('ha_config.json', {})
+        ha_url = ha_config.get('url')
+        ha_token = ha_config.get('token')
+        
+        if not ha_url or not ha_token:
+            return jsonify({'status': 'error', 'message': 'Home Assistant not configured'}), 500
+        
+        # Generate sensor entity ID based on naming convention
+        # PBV-LEVI -> sensor.pbv_levi_switch_0_power
+        sanitized_name = name.lower().replace('-', '_')
+        sensor_id = f"sensor.{sanitized_name}_switch_0_power"
+        
+        headers = {
+            "Authorization": f"Bearer {ha_token}",
+            "Content-Type": "application/json",
+        }
+        
+        resp = requests.get(f"{ha_url}/api/states/{sensor_id}", headers=headers)
+        
+        if resp.status_code == 200:
+            data = resp.json()
+            state = data.get('state', '0')
+            try:
+                power_watts = float(state)
+            except (ValueError, TypeError):
+                power_watts = 0
+            
+            is_running = power_watts > 70
+            return jsonify({
+                'status': 'success',
+                'name': name,
+                'power_watts': power_watts,
+                'is_running': is_running
+            }), 200
+        else:
+            return jsonify({
+                'status': 'success',
+                'name': name,
+                'power_watts': 0,
+                'is_running': False,
+                'plug_not_found': True
+            }), 200
+            
+    except Exception as e:
+        print(f"Error getting power status for {name}: {e}")
+        return jsonify({'status': 'error', 'message': str(e)}), 500
+
 if __name__ == '__main__':
-    app.run(debug=True,host='0.0.0.0',port=5000)
+    app.run(debug=False,host='0.0.0.0',port=5000,threaded=True)
