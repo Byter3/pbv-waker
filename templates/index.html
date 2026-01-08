@@ -250,8 +250,8 @@
             // Load power statuses on page load
             loadPowerStatuses();
 
-            // Refresh power statuses every 30 seconds
-            setInterval(loadPowerStatuses, 30000);
+            // Refresh power statuses every 60 seconds
+            setInterval(loadPowerStatuses, 60000);
 
             {% with messages = get_flashed_messages(with_categories = true) %}
             {% if messages %}
