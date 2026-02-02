@@ -1,35 +1,40 @@
 # docker-compose.yml
-# version 1
+# Wake On LAN Service for Portainer deployment
 
 services:
-  pbv-wker:
-    # This tells Portainer to build an image instead of pulling one.
+  pbv-waker:
     build:
-      # The path from the root of your repo to the folder with the Dockerfile.
       context: .
       dockerfile: Dockerfile
     
+    container_name: pbv-waker
     restart: unless-stopped
     
-    # Tells the container to get these variables from Portainer's environment.
-      
-    # Uncomment and adjust if your application uses a network port.
-    ports:
-     - "5000:5000"
-  
-  reverse-proxy:
-
-    build:
-      # The path from the root of your repo to the folder with the Dockerfile.
-      context: ./NGNIX Docker
-      dockerfile: Dockerfile
-
-    # image: nginx:latest
-
-    # volumes:
-    #   - /home/terike/wakeonlan-webapp-root/proxy/nginx.conf:/etc/nginx/nginx.conf
+    # Use host network for Wake-on-LAN magic packets to work
+    # WoL requires sending broadcast packets on the local network
+    network_mode: host
     
-    restart: unless-stopped
+    volumes:
+      # Persist data files outside container
+      - ./workstations.json:/app/workstations.json
+      - ./users.json:/app/users.json
+      - ./ha_config.json:/app/ha_config.json
+      - ./ad_config.json:/app/ad_config.json
+      - ./plugs.json:/app/plugs.json
+    
+    environment:
+      - FLASK_ENV=production
 
-    ports:
-      - "80:80"
+  # Optional: Uncomment if you want nginx reverse proxy
+  # Note: When using host network mode for pbv-waker, 
+  # reverse-proxy needs different config
+  # reverse-proxy:
+  #   build:
+  #     context: ./NGNIX Docker
+  #     dockerfile: Dockerfile
+  #   container_name: pbv-waker-proxy
+  #   restart: unless-stopped
+  #   ports:
+  #     - "80:80"
+  #   depends_on:
+  #     - pbv-waker

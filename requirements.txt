@@ -3,3 +3,5 @@ Werkzeug==2.0.3
 wakeonlan
 flask-login
 ldap3
+requests
+psutil
