@@ -12,6 +12,9 @@ from ad_integration import authenticate_user, sync_users_from_ad
 app = Flask(__name__)
 app.secret_key = 'your_secret_key'
 
+# Lock to prevent concurrent read-modify-write on workstations.json
+workstation_lock = threading.Lock()
+
 def time_ago(timestamp_str):
     if not timestamp_str:
         return ""
@@ -74,13 +77,10 @@ def load_json(file_path, default=None):
             with open(file_path, 'r', encoding='utf-8') as file:
                 return json.load(file)
         except json.JSONDecodeError as e:
-            print(f"DTO: Error decoding {file_path}: {e}")
-            if default is not None:
-                return default
-            return [] if 'workstations' in file_path else {}
-    if default is not None:
-        return default
-    return [] if 'workstations' in file_path else {}
+            print(f"DTO: CRITICAL - Error decoding {file_path}: {e}")
+            # Do NOT return empty list/dict on decode error — that causes data wipes
+            # when a subsequent write saves the empty data back to disk.
+            raise
     if default is not None:
         return default
     return [] if 'workstations' in file_path else {}
@@ -93,14 +93,16 @@ def read_workstations():
     return load_json('workstations.json')
 
 def write_workstation(name, ip, mac):
-    workstations = read_workstations()
-    workstations.append({'name': name, 'ip': ip, 'mac': mac})
-    save_json('workstations.json', workstations)
+    with workstation_lock:
+        workstations = read_workstations()
+        workstations.append({'name': name, 'ip': ip, 'mac': mac})
+        save_json('workstations.json', workstations)
 
 def delete_workstation(mac):
-    workstations = read_workstations()
-    workstations = [ws for ws in workstations if ws['mac'] != mac]
-    save_json('workstations.json', workstations)
+    with workstation_lock:
+        workstations = read_workstations()
+        workstations = [ws for ws in workstations if ws['mac'] != mac]
+        save_json('workstations.json', workstations)
 
 def read_users():
     return load_json('users.json')
@@ -267,29 +269,33 @@ def register_workstation():
     
     if not mac or not ip or not name:
         return jsonify({'error': 'Missing required fields'}), 400
-        
-    workstations = load_json('workstations.json')
     
-    # Check if workstation exists
-    existing = next((item for item in workstations if item['mac'] == mac), None)
-    
-    if existing:
-        existing['ip'] = ip
-        existing['name'] = name
-        existing['last_user'] = user
-        existing['last_seen'] = last_seen
-        existing['idle_seconds'] = idle_seconds
-    else:
-        workstations.append({
-            'mac': mac,
-            'ip': ip,
-            'name': name,
-            'last_user': user,
-            'last_seen': last_seen,
-            'idle_seconds': idle_seconds
-        })
+    with workstation_lock:
+        try:
+            workstations = load_json('workstations.json')
+        except json.JSONDecodeError:
+            return jsonify({'error': 'Server data file corrupted, skipping write to prevent data loss'}), 500
         
-    save_json('workstations.json', workstations)
+        # Check if workstation exists
+        existing = next((item for item in workstations if item['mac'] == mac), None)
+        
+        if existing:
+            existing['ip'] = ip
+            existing['name'] = name
+            existing['last_user'] = user
+            existing['last_seen'] = last_seen
+            existing['idle_seconds'] = idle_seconds
+        else:
+            workstations.append({
+                'mac': mac,
+                'ip': ip,
+                'name': name,
+                'last_user': user,
+                'last_seen': last_seen,
+                'idle_seconds': idle_seconds
+            })
+            
+        save_json('workstations.json', workstations)
     return jsonify({'status': 'success', 'message': 'Workstation registered'}), 200
 
 @app.route('/rdp/<ip>')
