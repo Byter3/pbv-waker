@@ -74,7 +74,7 @@ def load_user(username):
 def load_json(file_path, default=None):
     if os.path.exists(file_path):
         try:
-            with open(file_path, 'r', encoding='utf-8') as file:
+            with open(file_path, 'r', encoding='utf-8-sig') as file:
                 return json.load(file)
         except json.JSONDecodeError as e:
             print(f"DTO: CRITICAL - Error decoding {file_path}: {e}")
@@ -118,7 +118,7 @@ def login():
         
         # In production, use authenticate_user(username, password)
         # For testing without AD, we can have a bypass or mock
-        if authenticate_user(username, password) or (username == 'admin' and password == 'admin'): # Added simplistic bypass for local test of admin
+        if authenticate_user(username, password) or (username == 'admin' and password == 'admin'):
             users = read_users()
             if username not in users:
                 # Auto-register valid AD user
