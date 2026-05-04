@@ -5,7 +5,7 @@ import ctypes
 import ctypes.wintypes
 import logging
 
-SERVER_URL = "http://10.10.101.109:5001/api/register"
+SERVER_URL = "http://10.10.101.130:5000/api/register"
 TARGET_SUBNET_PREFIX = "10.10.101."
 
 # Set up logging to file for debugging when running as SYSTEM
