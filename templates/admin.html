@@ -118,7 +118,7 @@
                             <th>Name</th>
                             <th>IP</th>
                             <th>MAC</th>
-                            <th>Last User</th>
+                            <th>Active Users</th>
                             <th>Last Seen</th>
                             <th>Action</th>
                         </tr>
@@ -129,7 +129,20 @@
                             <td>{{ ws.name }}</td>
                             <td>{{ ws.ip }}</td>
                             <td>{{ ws.mac }}</td>
-                            <td>{{ ws.last_user }}</td>
+                            <td>
+                                {% if ws.active_users is defined and ws.active_users %}
+                                    {% for u in ws.active_users %}
+                                    <span title="{{ u.session_type }}">
+                                        {% if u.session_type == 'console' %}🖥️{% elif u.session_type == 'rdp' %}🖧{% elif u.session_type == 'disconnected' %}⏸️{% else %}❓{% endif %}
+                                        {{ u.username }}
+                                    </span>{% if not loop.last %}, {% endif %}
+                                    {% endfor %}
+                                {% elif ws.last_user %}
+                                    {{ ws.last_user }}
+                                {% else %}
+                                    <span class="text-muted">—</span>
+                                {% endif %}
+                            </td>
                             <td>{{ ws.last_seen | time_ago }}</td>
                             <td>
                                 <button type="button" class="btn btn-danger btn-sm"

@@ -549,3 +549,22 @@ th.sortable.sort-desc {
 .power-indicator.not-found .status-text {
     color: #ff6b7a;
 }
+
+/* Active Users - Session entries */
+.user-session-entry {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 0;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.user-session-entry + .user-session-entry {
+    border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.session-type-badge {
+    font-size: 0.85rem;
+    flex-shrink: 0;
+}

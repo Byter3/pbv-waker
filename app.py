@@ -263,12 +263,34 @@ def register_workstation():
     mac = data.get('mac')
     ip = data.get('ip')
     name = data.get('name')
-    user = data.get('user', '')
-    idle_seconds = data.get('idle_seconds', 0)
     last_seen = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     if not mac or not ip or not name:
         return jsonify({'error': 'Missing required fields'}), 400
+    
+    # ── Handle both old and new payload formats ──
+    active_users = data.get('active_users', None)
+    
+    if active_users is None:
+        # Old format: single "user" + "idle_seconds" fields (backwards compat)
+        old_user = data.get('user', '')
+        old_idle = data.get('idle_seconds', 0)
+        if old_user:
+            active_users = [{"username": old_user, "idle_seconds": old_idle, "session_type": "unknown"}]
+        else:
+            active_users = []
+    
+    # Derive last_user and idle_seconds for backwards compat with UI
+    if active_users:
+        # Prefer console user, fall back to first user
+        console_users = [u for u in active_users if u.get('session_type') == 'console']
+        primary_user = console_users[0] if console_users else active_users[0]
+        last_user = primary_user['username']
+        # Use minimum idle across all users (most recently active)
+        idle_seconds = min(u.get('idle_seconds', 0) for u in active_users)
+    else:
+        last_user = ''
+        idle_seconds = 0
     
     with workstation_lock:
         try:
@@ -282,17 +304,19 @@ def register_workstation():
         if existing:
             existing['ip'] = ip
             existing['name'] = name
-            existing['last_user'] = user
+            existing['last_user'] = last_user
             existing['last_seen'] = last_seen
             existing['idle_seconds'] = idle_seconds
+            existing['active_users'] = active_users
         else:
             workstations.append({
                 'mac': mac,
                 'ip': ip,
                 'name': name,
-                'last_user': user,
+                'last_user': last_user,
                 'last_seen': last_seen,
-                'idle_seconds': idle_seconds
+                'idle_seconds': idle_seconds,
+                'active_users': active_users
             })
             
         save_json('workstations.json', workstations)
