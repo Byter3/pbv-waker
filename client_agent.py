@@ -8,11 +8,15 @@ import logging
 SERVER_URL = "http://10.10.101.130:5000/api/register"
 TARGET_SUBNET_PREFIX = "10.10.101."
 
-# Set up logging to file for debugging when running as SYSTEM
+# Set up logging — console + file on C:\ drive (overwrites each run with latest report)
+LOG_FILE = r"C:\ProgramData\pbv_agent.log"
 logging.basicConfig(
     level=logging.INFO,
     format='%(asctime)s [%(levelname)s] %(message)s',
-    handlers=[logging.StreamHandler()]
+    handlers=[
+        logging.StreamHandler(),
+        logging.FileHandler(LOG_FILE, mode='w', encoding='utf-8'),
+    ]
 )
 log = logging.getLogger("PBV-Agent")
 
