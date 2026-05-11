@@ -568,3 +568,10 @@ th.sortable.sort-desc {
     font-size: 0.85rem;
     flex-shrink: 0;
 }
+
+/* Connection column - narrow, centered */
+.connection-col {
+    text-align: center;
+    min-width: 50px;
+    max-width: 70px;
+}

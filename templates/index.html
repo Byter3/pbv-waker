@@ -36,7 +36,9 @@
                     <th class="sortable" data-sort="name">Name <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="ip">IP Address <span class="sort-icon"></span></th>
                     <th class="sortable" data-sort="mac">MAC Address <span class="sort-icon"></span></th>
-                    <th class="sortable" data-sort="user">Active Users <span class="sort-icon"></span></th>
+                    <th>Connection</th>
+                    <th class="sortable" data-sort="user">Users <span class="sort-icon"></span></th>
+                    <th>Status</th>
                     <th class="sortable" data-sort="seen">Last Seen <span class="sort-icon"></span></th>
                     <th>Action</th>
                 </tr>
@@ -53,36 +55,60 @@
                     <td>{{ workstation.name }}</td>
                     <td>{{ workstation.ip }}</td>
                     <td>{{ workstation.mac }}</td>
-                    <td>
+                    <td class="connection-col">
                         {% if workstation.active_users is defined and workstation.active_users %}
                             {% for u in workstation.active_users %}
                             <div class="user-session-entry">
                                 <span class="session-type-badge {{ u.session_type }}" title="{{ u.session_type }}">
                                     {% if u.session_type == 'console' %}🖥️{% elif u.session_type == 'rdp' %}🖧{% elif u.session_type == 'disconnected' %}⏸️{% else %}❓{% endif %}
                                 </span>
+                            </div>
+                            {% endfor %}
+                        {% else %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if workstation.active_users is defined and workstation.active_users %}
+                            {% for u in workstation.active_users %}
+                            <div class="user-session-entry">
                                 {{ u.username }}
-                                <small class="ml-1">
-                                    {% if u.session_type == 'disconnected' %}
-                                        <span class="text-muted">(Disconnected)</span>
-                                    {% elif not u.idle_seconds or u.idle_seconds < 60 %}
-                                        <span class="text-success font-weight-bold">(Active)</span>
-                                    {% else %}
-                                        <span class="text-warning">(Idle: {{ (u.idle_seconds / 60) | int }}m)</span>
-                                    {% endif %}
-                                </small>
                             </div>
                             {% endfor %}
                         {% elif workstation.last_user %}
                             {{ workstation.last_user }}
-                            <small class="ml-1">
-                                {% if not workstation.idle_seconds or workstation.idle_seconds < 60 %}
-                                    <span class="text-success font-weight-bold">(Active)</span>
+                        {% else %}
+                            <span class="text-muted"><em>No users</em></span>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if workstation.active_users is defined and workstation.active_users %}
+                            {% for u in workstation.active_users %}
+                            <div class="user-session-entry">
+                                {% if u.session_type == 'disconnected' %}
+                                    <span class="text-muted">
+                                        Disconnected
+                                        {% if u.disconnect_seconds is defined and u.disconnect_seconds > 0 %}
+                                            ({{ (u.disconnect_seconds / 3600) | int }}h {{ ((u.disconnect_seconds % 3600) / 60) | int }}m)
+                                        {% endif %}
+                                    </span>
+                                {% elif not u.idle_seconds or u.idle_seconds < 60 %}
+                                    <span class="text-success font-weight-bold">Active</span>
                                 {% else %}
-                                    <span class="text-warning">(Idle: {{ (workstation.idle_seconds / 60) | int }}m)</span>
+                                    <span class="text-warning">Idle: {{ (u.idle_seconds / 60) | int }}m</span>
+                                {% endif %}
+                            </div>
+                            {% endfor %}
+                        {% elif workstation.last_user %}
+                            <small>
+                                {% if not workstation.idle_seconds or workstation.idle_seconds < 60 %}
+                                    <span class="text-success font-weight-bold">Active</span>
+                                {% else %}
+                                    <span class="text-warning">Idle: {{ (workstation.idle_seconds / 60) | int }}m</span>
                                 {% endif %}
                             </small>
                         {% else %}
-                            <span class="text-muted"><em>No users logged in</em></span>
+                            <span class="text-muted">—</span>
                         {% endif %}
                     </td>
                     <td data-value="{{ workstation.last_seen or '' }}" class="last-seen-cell">
