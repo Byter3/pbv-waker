@@ -88,8 +88,13 @@
                                 {% if u.session_type == 'disconnected' %}
                                     <span class="text-muted">
                                         Disconnected
-                                        {% if u.disconnect_seconds is defined and u.disconnect_seconds > 0 %}
-                                            ({{ (u.disconnect_seconds / 3600) | int }}h {{ ((u.disconnect_seconds % 3600) / 60) | int }}m)
+                                        {% if u.disconnected_since is defined and u.disconnected_since %}
+                                            {% set disc_secs = (now - u.disconnected_since | parse_datetime).total_seconds() %}
+                                            {% if disc_secs > 3600 %}
+                                                ({{ (disc_secs / 3600) | int }}h {{ ((disc_secs % 3600) / 60) | int }}m)
+                                            {% elif disc_secs > 60 %}
+                                                ({{ (disc_secs / 60) | int }}m)
+                                            {% endif %}
                                         {% endif %}
                                     </span>
                                 {% elif not u.idle_seconds or u.idle_seconds < 60 %}

@@ -180,33 +180,6 @@ def _query_session_idle_seconds(session_id):
     return 0.0
 
 
-def _query_session_disconnect_seconds(session_id):
-    """
-    Query how long a session has been disconnected using WTSINFO struct.
-    Returns disconnect duration in seconds as a float, or 0.0 on failure.
-    """
-    buf = ctypes.wintypes.LPWSTR()
-    size = ctypes.wintypes.DWORD()
-
-    if wtsapi32.WTSQuerySessionInformationW(
-        WTS_CURRENT_SERVER_HANDLE, session_id, WTSSessionInfo,
-        ctypes.byref(buf), ctypes.byref(size)
-    ):
-        if size.value >= ctypes.sizeof(WTSINFO):
-            info = ctypes.cast(buf, ctypes.POINTER(WTSINFO)).contents
-            current_time = info.CurrentTime.QuadPart
-            disconnect_time = info.DisconnectTime.QuadPart
-
-            wtsapi32.WTSFreeMemory(buf)
-
-            if disconnect_time > 0 and current_time > disconnect_time:
-                # FILETIME is in 100-nanosecond intervals
-                return (current_time - disconnect_time) / 10_000_000.0
-            return 0.0
-        wtsapi32.WTSFreeMemory(buf)
-    return 0.0
-
-
 def get_active_sessions():
     """
     Enumerate all active user sessions on this machine.
@@ -245,11 +218,9 @@ def get_active_sessions():
             # Get session type (console/rdp)
             session_type = _query_session_protocol(si.SessionId)
 
-            # Mark disconnected sessions and get disconnect duration
-            disconnect_seconds = 0
+            # Mark disconnected sessions
             if si.State == WTS_DISCONNECTED:
                 session_type = "disconnected"
-                disconnect_seconds = _query_session_disconnect_seconds(si.SessionId)
 
             # Get idle time
             idle_seconds = _query_session_idle_seconds(si.SessionId)
@@ -258,7 +229,6 @@ def get_active_sessions():
                 "username": username,
                 "idle_seconds": round(idle_seconds, 1),
                 "session_type": session_type,
-                "disconnect_seconds": round(disconnect_seconds, 1),
             })
 
     finally:

@@ -301,6 +301,23 @@ def register_workstation():
         # Check if workstation exists
         existing = next((item for item in workstations if item['mac'] == mac), None)
         
+        # ── Track disconnected_since per user (server-side) ──
+        # Build a lookup of previously stored disconnect timestamps
+        prev_disconnect_times = {}
+        if existing and existing.get('active_users'):
+            for prev_u in existing['active_users']:
+                if prev_u.get('disconnected_since'):
+                    prev_disconnect_times[prev_u['username']] = prev_u['disconnected_since']
+        
+        # Stamp disconnected_since on disconnected users
+        for u in active_users:
+            if u.get('session_type') == 'disconnected':
+                # Keep existing timestamp if user was already disconnected, else stamp now
+                u['disconnected_since'] = prev_disconnect_times.get(u['username'], last_seen)
+            else:
+                # Active users - no disconnect timestamp
+                u.pop('disconnected_since', None)
+        
         if existing:
             existing['ip'] = ip
             existing['name'] = name
