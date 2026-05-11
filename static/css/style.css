@@ -593,6 +593,10 @@ th.sortable.sort-desc {
     border-left: 1px solid rgba(255, 255, 255, 0.06);
 }
 
+.connection-col .user-session-entry {
+    justify-content: flex-end;
+}
+
 .users-col {
     padding-left: 6px !important;
     padding-right: 6px !important;
