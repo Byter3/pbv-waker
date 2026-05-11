@@ -133,7 +133,7 @@
                                 {% if ws.active_users is defined and ws.active_users %}
                                     {% for u in ws.active_users %}
                                     <span title="{{ u.session_type }}">
-                                        {% if u.session_type == 'console' %}🖥️{% elif u.session_type == 'rdp' %}🖧{% elif u.session_type == 'disconnected' %}⏸️{% else %}❓{% endif %}
+                                        {% if u.session_type == 'console' %}👤🖥️{% elif u.session_type == 'rdp' %}🌐🖥️{% elif u.session_type == 'disconnected' %}⏸️{% else %}❓{% endif %}
                                         {{ u.username }}
                                     </span>{% if not loop.last %}, {% endif %}
                                     {% endfor %}

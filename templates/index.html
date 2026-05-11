@@ -60,7 +60,7 @@
                             {% for u in workstation.active_users %}
                             <div class="user-session-entry">
                                 <span class="session-type-badge {{ u.session_type }}" title="{{ u.session_type }}">
-                                    {% if u.session_type == 'console' %}🖥️{% elif u.session_type == 'rdp' %}🖧{% elif u.session_type == 'disconnected' %}⏸️{% else %}❓{% endif %}
+                                    {% if u.session_type == 'console' %}👤🖥️{% elif u.session_type == 'rdp' %}🌐🖥️{% elif u.session_type == 'disconnected' %}⏸️{% else %}❓{% endif %}
                                 </span>
                             </div>
                             {% endfor %}
