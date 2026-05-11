@@ -569,9 +569,22 @@ th.sortable.sort-desc {
     flex-shrink: 0;
 }
 
-/* Connection column - narrow, centered */
+/* Connection | Users | Status — tight column group */
 .connection-col {
-    text-align: center;
-    min-width: 50px;
-    max-width: 70px;
+    text-align: right;
+    padding-right: 2px !important;
+    white-space: nowrap;
+    width: 1%;  /* shrink to content */
+}
+
+.users-col {
+    padding-left: 4px !important;
+    padding-right: 4px !important;
+}
+
+.status-col {
+    padding-left: 4px !important;
+    white-space: nowrap;
+    width: 1%;  /* shrink to content */
+    font-size: 0.85rem;
 }

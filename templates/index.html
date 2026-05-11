@@ -68,7 +68,7 @@
                             <span class="text-muted">—</span>
                         {% endif %}
                     </td>
-                    <td>
+                    <td class="users-col">
                         {% if workstation.active_users is defined and workstation.active_users %}
                             {% for u in workstation.active_users %}
                             <div class="user-session-entry">
@@ -81,7 +81,7 @@
                             <span class="text-muted"><em>No users</em></span>
                         {% endif %}
                     </td>
-                    <td>
+                    <td class="status-col">
                         {% if workstation.active_users is defined and workstation.active_users %}
                             {% for u in workstation.active_users %}
                             <div class="user-session-entry">
